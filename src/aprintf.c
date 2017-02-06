@@ -7,7 +7,8 @@
 
 char *aprintf(char **s, const char *fmt, ...) {
     char *c = NULL;
-    int n, len;
+	int n;
+	size_t len;
     va_list ap;
 
     va_start(ap, fmt);

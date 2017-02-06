@@ -57,7 +57,7 @@ lua_State *script_create(char *file, char *url, char **headers) {
     luaL_newmetatable(L, "wrk.thread");
     luaL_register(L, NULL, threadlib);
 
-    struct http_parser_url parts = {};
+    struct http_parser_url parts = {0};
     script_parse_url(url, &parts);
     char *path = "/";
 

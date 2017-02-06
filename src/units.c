@@ -2,7 +2,12 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#if !_MSC_VER
 #include <strings.h>
+#else
+#include <string.h>
+#define strncasecmp _strnicmp
+#endif
 #include <inttypes.h>
 
 #include "units.h"

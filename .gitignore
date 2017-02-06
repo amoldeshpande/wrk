@@ -1,2 +1,6 @@
 obj/
 wrk
+wrk-msvs/x64/
+wrk-msvs/Win32/
+wrk-msvs/wrk-msvs.VC.VC.opendb
+wrk-msvs/wrk-msvs.VC.db

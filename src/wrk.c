@@ -23,6 +23,7 @@ static struct {
     stats *requests;
 } statistics;
 
+#if !_MSC_VER
 static struct sock sock = {
     .connect  = sock_connect,
     .close    = sock_close,
@@ -30,6 +31,15 @@ static struct sock sock = {
     .write    = sock_write,
     .readable = sock_readable
 };
+#else
+static struct sock sock = {
+	.connect = sock_connect_win,
+	.close = sock_close_win,
+	.read = sock_read_win,
+	.write = sock_write_win,
+	.readable = sock_readable_win
+};
+#endif
 
 static struct http_parser_settings parser_settings = {
     .on_message_complete = response_complete
@@ -59,8 +69,12 @@ static void usage() {
 }
 
 int main(int argc, char **argv) {
+#if _MSC_VER
+	WSADATA wsd;
+	WSAStartup(0x202, &wsd);
+#endif
     char *url, **headers = zmalloc(argc * sizeof(char *));
-    struct http_parser_url parts = {};
+    struct http_parser_url parts = {0};
 
     if (parse_args(&cfg, &url, &parts, headers, argc, argv)) {
         usage();
@@ -84,9 +98,10 @@ int main(int argc, char **argv) {
         sock.write    = ssl_write;
         sock.readable = ssl_readable;
     }
-
+#if !_MSC_VER
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT,  SIG_IGN);
+#endif
 
     statistics.latency  = stats_alloc(cfg.timeout * 1000);
     statistics.requests = stats_alloc(MAX_THREAD_RATE_S);
@@ -104,6 +119,10 @@ int main(int argc, char **argv) {
     for (uint64_t i = 0; i < cfg.threads; i++) {
         thread *t      = &threads[i];
         t->loop        = aeCreateEventLoop(10 + cfg.connections * 3);
+#if _MSC_VER
+		t->hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+		t->loop->hCompletionPort = t->hCompletionPort;
+#endif
         t->connections = cfg.connections / cfg.threads;
 
         t->L = script_create(cfg.script, url, headers);
@@ -119,20 +138,25 @@ int main(int argc, char **argv) {
                 parser_settings.on_body         = response_body;
             }
         }
-
-        if (!t->loop || pthread_create(&t->thread, NULL, &thread_main, t)) {
+#if !_MSC_VER
+        if (!t->loop 
+#else
+		if(!t->hCompletionPort
+#endif
+		|| pthread_create(&t->thread, NULL, &thread_main, t)) {
             char *msg = strerror(errno);
             fprintf(stderr, "unable to create thread %"PRIu64": %s\n", i, msg);
             exit(2);
         }
     }
-
+#if !_MSC_VER
     struct sigaction sa = {
         .sa_handler = handler,
         .sa_flags   = 0,
     };
     sigfillset(&sa.sa_mask);
     sigaction(SIGINT, &sa, NULL);
+#endif
 
     char *time = format_time_s(cfg.duration);
     printf("Running %s test @ %s\n", time, url);
@@ -218,7 +242,11 @@ void *thread_main(void *arg) {
         c->request = request;
         c->length  = length;
         c->delayed = cfg.delay;
+#if !_MSC_VER
         connect_socket(thread, c);
+#else
+		connect_socket_win(thread, c);
+#endif
     }
 
     aeEventLoop *loop = thread->loop;
@@ -236,9 +264,10 @@ void *thread_main(void *arg) {
 static int connect_socket(thread *thread, connection *c) {
     struct addrinfo *addr = thread->addr;
     struct aeEventLoop *loop = thread->loop;
-    int fd, flags;
-
+	fd_t fd;
+	int flags;
     fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+
 
     flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
@@ -269,7 +298,6 @@ static int reconnect_socket(thread *thread, connection *c) {
     close(c->fd);
     return connect_socket(thread, c);
 }
-
 static int record_rate(aeEventLoop *loop, long long id, void *data) {
     thread *thread = data;
 
@@ -359,7 +387,7 @@ static int response_complete(http_parser *parser) {
     return 0;
 }
 
-static void socket_connected(aeEventLoop *loop, int fd, void *data, int mask) {
+ void socket_connected(aeEventLoop *loop, fd_t fd, void *data, int mask) {
     connection *c = data;
 
     switch (sock.connect(c, cfg.host)) {
@@ -381,7 +409,7 @@ static void socket_connected(aeEventLoop *loop, int fd, void *data, int mask) {
     reconnect_socket(c->thread, c);
 }
 
-static void socket_writeable(aeEventLoop *loop, int fd, void *data, int mask) {
+static void socket_writeable(aeEventLoop *loop, fd_t fd, void *data, int mask) {
     connection *c = data;
     thread *thread = c->thread;
 
@@ -423,7 +451,7 @@ static void socket_writeable(aeEventLoop *loop, int fd, void *data, int mask) {
     reconnect_socket(thread, c);
 }
 
-static void socket_readable(aeEventLoop *loop, int fd, void *data, int mask) {
+static void socket_readable(aeEventLoop *loop, fd_t fd, void *data, int mask) {
     connection *c = data;
     size_t n;
 
@@ -434,8 +462,10 @@ static void socket_readable(aeEventLoop *loop, int fd, void *data, int mask) {
             case RETRY: return;
         }
 
-        if (http_parser_execute(&c->parser, &parser_settings, c->buf, n) != n) goto error;
-        if (n == 0 && !http_body_is_final(&c->parser)) goto error;
+        if (http_parser_execute(&c->parser, &parser_settings, c->buf, n) != n)
+			goto error;
+        if (n == 0 && !http_body_is_final(&c->parser))
+			goto error;
 
         c->thread->bytes += n;
     } while (n == RECVBUF && sock.readable(c) > 0);
@@ -446,13 +476,13 @@ static void socket_readable(aeEventLoop *loop, int fd, void *data, int mask) {
     c->thread->errors.read++;
     reconnect_socket(c->thread, c);
 }
-
+#if !_MSC_VER
 static uint64_t time_us() {
     struct timeval t;
     gettimeofday(&t, NULL);
     return (t.tv_sec * 1000000) + t.tv_usec;
 }
-
+#endif
 static char *copy_url_part(char *url, struct http_parser_url *parts, enum http_parser_url_fields field) {
     char *part = NULL;
 

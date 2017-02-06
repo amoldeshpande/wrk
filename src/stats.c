@@ -3,7 +3,11 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <math.h>
-
+#if _MSC_VER
+#include <wincompat.h>
+#undef min
+#undef max
+#endif
 #include "stats.h"
 #include "zmalloc.h"
 
@@ -21,8 +25,8 @@ void stats_free(stats *stats) {
 
 int stats_record(stats *stats, uint64_t n) {
     if (n >= stats->limit) return 0;
-    __sync_fetch_and_add(&stats->data[n], 1);
-    __sync_fetch_and_add(&stats->count, 1);
+    __sync_add_and_fetch(&stats->data[n], 1);
+    __sync_add_and_fetch(&stats->count, 1);
     uint64_t min = stats->min;
     uint64_t max = stats->max;
     while (n < min) min = __sync_val_compare_and_swap(&stats->min, min, n);

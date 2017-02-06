@@ -31,7 +31,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if !_MSC_VER
 #include <pthread.h>
+#else
+#include <wincompat.h>
+#endif
 #include "config.h"
 #include "zmalloc.h"
 
@@ -84,7 +88,11 @@
 
 static size_t used_memory = 0;
 static int zmalloc_thread_safe = 0;
+#if !_MSC_VER
 pthread_mutex_t used_memory_mutex = PTHREAD_MUTEX_INITIALIZER;
+#else
+CRITICAL_SECTION used_memory_mutex;
+#endif
 
 static void zmalloc_oom(size_t size) {
     fprintf(stderr, "zmalloc: Out of memory trying to allocate %zu bytes\n",

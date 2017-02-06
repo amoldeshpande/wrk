@@ -1,7 +1,10 @@
 // Copyright (C) 2013 - Will Glozer.  All rights reserved.
 
+#if !_MSC_VER
 #include <pthread.h>
-
+#else
+#include <wincompat.h>
+#endif
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
@@ -19,8 +22,8 @@ static void ssl_lock(int mode, int n, const char *file, int line) {
     }
 }
 
-static unsigned long ssl_id() {
-    return (unsigned long) pthread_self();
+static void ssl_id(CRYPTO_THREADID*id ) {
+	CRYPTO_THREADID_set_pointer(id, pthread_self());
 }
 
 SSL_CTX *ssl_init() {
@@ -36,7 +39,8 @@ SSL_CTX *ssl_init() {
         }
 
         CRYPTO_set_locking_callback(ssl_lock);
-        CRYPTO_set_id_callback(ssl_id);
+        //CRYPTO_set_id_callback(ssl_id);
+		CRYPTO_THREADID_set_callback(ssl_id);
 
         if ((ctx = SSL_CTX_new(SSLv23_client_method()))) {
             SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);

@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{27a89e82-91b4-4806-8e37-fb8d698fbff0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\aprintf.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\http_parser.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ssl.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\stats.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\units.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\wrk.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\zmalloc.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="getopt.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="wincompat.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="wincompat.h" />
+    <ClInclude Include="..\src\ae.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\aprintf.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\config.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\http_parser.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\main.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\net.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ssl.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\stats.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\units.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\wrk.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\zmalloc.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\src\wrk.lua">
+      <Filter>src</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>
